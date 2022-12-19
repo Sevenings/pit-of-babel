@@ -5,7 +5,7 @@ from multipledispatch import dispatch
 # Version 17/12/22 20:34
 
 class Tela:
-    def __init__(self, x, y):
+    def __init__(self, x=211, y=114):
         self.width = x
         self.height = int(y/2)
         self.surface = []
@@ -14,7 +14,13 @@ class Tela:
             for j in range(self.width):
                 self.surface[i].append(" ")
         self.surface_save = self.surface.copy()
+        self.scene = []
+        self.framerate = 10
     
+    def addObject(self, *objects):
+        for object in objects:
+            self.scene.append(object)
+
     def getHeight(self):
         return self.height*2
 
@@ -51,7 +57,7 @@ class Tela:
         self.surface[i][j] = character
         return True
 
-    def drawLine(self, character, xo, yo, length):
+    def drawLineSegment(self, character, xo, yo, length):
         for i in range(length):
             self.drawPoint(character, xo + i, yo)
 
@@ -59,15 +65,15 @@ class Tela:
         for j in range(height):
             self.drawPoint(character, xo, yo + j)
 
-    def drawDivisionLine(self, character, yo):
-        self.drawLine(character, 0, yo, self.getWidth())
+    def drawDivisionLineSegment(self, character, yo):
+        self.drawLineSegment(character, 0, yo, self.getWidth())
 
     def drawDivisionCollumn(self, character, xo):
         self.drawCollumn(character, xo, 0, self.getHeight())
 
     def drawBorder(self, cornerChar='@', horizontalChar='-', verticalChar='|'):
-        self.drawDivisionLine(horizontalChar, 0)
-        self.drawDivisionLine(horizontalChar, self.getHeight()-1)
+        self.drawDivisionLineSegment(horizontalChar, 0)
+        self.drawDivisionLineSegment(horizontalChar, self.getHeight()-1)
         self.drawDivisionCollumn(verticalChar, 0)
         self.drawDivisionCollumn(verticalChar, self.getWidth()-1)
         self.drawPoint(cornerChar, 0, 0)
@@ -84,6 +90,15 @@ class Tela:
             x = xo + radius*math.cos(math.pi/180 * i)
             y = yo + radius*math.sin(math.pi/180 * i)
             self.drawPoint(char, x, y)
+    
+    def update_print(self):
+        self.clear()
+        self.drawBorder()
+        for object in self.scene:
+            self.drawObject(object)
+        os.system('clear')
+        print(self.toString())
+        time.sleep(1/self.framerate)
 
 
 class Object2D(ABC):
@@ -158,13 +173,60 @@ class Point:
         for i in range(n_division_focus):
             if abs(angle - i*2*math.pi/n_division_focus) < error_limit:
                 angle = i*2*math.pi/n_division_focus
-                break
+            break
         self.translateToPoint(Point(point.x + distance*math.cos(angle), point.y +
             distance*math.sin(angle)))
 
+    def distanceToPoint(self, point):
+        d_vector = self - point
+        distance = math.sqrt(pow(d_vector.x, 2) + pow(d_vector.y, 2))
+        return distance
+
+    def distanceToLine(self, line):
+        a = line.A
+        b = line.B
+        c = line.C
+        xo = self.x
+        yo = self.y
+        return abs(a*xo + b*yo + c)/math.sqrt(pow(a, 2) + pow(b, 2))
 
 
-class Line(Object2D):
+class Line:
+    def __init__(self, *parameters):
+        if len(parameters) == 3:	# Given A, B and C
+            self.A = parameters[0]
+            self.B = parameters[1]
+            self.C = parameters[2]
+        elif len(parameters) == 2:	# Given two Points
+            pointA = parameters[0]
+            pointB = parameters[1]
+            d = pointB - pointA
+            # (dx)y - (dx)yo - (dy)(x) + (dy)(xo) = 0
+            self.A = d.x
+            self.B = -d.y
+            self.C = d.y*pointB.x - d.x*pointA.y
+
+    def interception(self, line):
+        A1 = self.A
+        B1 = self.B
+        C1 = self.C
+        A2 = line.A
+        B2 = line.B
+        C2 = line.C
+        y = (C1*A2 - A1*C2)/(A1*B2 - A2*B1)
+        x = (-C1 - B1*y)/A1
+        return Point(x, y)
+
+    def pointOnX(self, x):
+        y = (-self.A*x - self.C)/self.B
+        return Point(x, y)
+
+    def pointOnY(self, y):
+        x = (-self.B*y - self.C)/self.A
+        return Point(x, y) 
+
+
+class LineSegment(Object2D):
     def __init__(self, pointA, pointB):
         self.points = [pointA, pointB]
 
@@ -186,7 +248,7 @@ class Line(Object2D):
         else:
             density = int(abs(dx) + 1)
             switch = 0
-
+ 
         char = 'o'
         angle = self.inclinationAngle()
         if -1*math.atan(2)/2 < angle and angle <= math.atan(2)/2:
@@ -204,7 +266,7 @@ class Line(Object2D):
             tela.drawPoint(char, x, y)
         for point in self.points:
             tela.drawObject(point)
-   
+
     def lenght(self):
         A = self.points[0]
         B = self.points[1]
@@ -231,6 +293,10 @@ class Line(Object2D):
     def center(self):
         return self.middlePoint()
 
+    def halfAngle(self, line_segment):
+        halfAngle = (line_segment.inclinationAngle() + self.inclinationAngle())/2
+        return halfAngle
+
 
 class Polygon(Object2D):
     def __init__(self, *points):
@@ -241,16 +307,16 @@ class Polygon(Object2D):
             for point in points:
                 self.points.append(point)
 
-        self.lines = []
+        self.line_segments = []
         for i in range(len(self.points)):
             if i < len(self.points) - 1:
-                self.lines.append(Line(self.points[i], self.points[i+1]))
+                self.line_segments.append(LineSegment(self.points[i], self.points[i+1]))
             else:
-                self.lines.append(Line(self.points[i], self.points[0]))
+                self.line_segments.append(LineSegment(self.points[i], self.points[0]))
 
     def draw(self, tela):
-        for line in self.lines:
-            line.draw(tela)
+        for line_segment in self.line_segments:
+            line_segment.draw(tela)
 
     def center(self):
         soma_x = 0
@@ -327,11 +393,19 @@ class ShapeGroup(Object2D):
 
 
 class Circunference(Object2D):
-    def __init__(self, xo: float, yo: float, radius: float):
-        self.center = Point(xo, yo)
+    def __init__(self, center: Point, radius: float):
+        self.center = center
         self.radius = radius
    
     def draw(self, tela):
        char = 'o'
        tela.drawCircle(char, self.center.x, self.center.y, self.radius)
- 
+
+
+class Text:
+	def __init__(self, text, pos):
+		self.text = text
+		self.pos = pos
+
+	def draw(self, tela):
+		tela.write(self.text, self.pos.x, self.pos.y)

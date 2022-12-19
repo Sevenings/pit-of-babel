@@ -6,7 +6,7 @@ tela = Tela(211, 114)
 
 star = Star(tela.center(), 25)
 star = RegularPolygon(tela.center(), 5, 25, -math.pi/10, 2)
-circle = Circunference(tela.center().x, tela.center().y, 26)
+circle = Circunference(tela.center(), 26)
 pentagon = RegularPolygon(tela.center(), 5, 35)
 hexagon = RegularPolygon(tela.center(), 6, 50, math.pi)
 u_pentagon = RegularPolygon(tela.center(), 5, 43, 1*math.pi/5)
@@ -19,8 +19,8 @@ scene = [
         hexagon, 
         pentagon, 
         u_pentagon,
-        Circunference(tela.center().x, tela.center().y, 50),
-        Circunference(tela.center().x, tela.center().y, 43)
+        Circunference(tela.center(), 50),
+        Circunference(tela.center(), 43)
         ]
 
 

@@ -2,7 +2,7 @@ import os, time, math, random
 from interfaceapi import *
 tela = Tela(211, 114)
 
-circunference = Circunference(tela.getWidth()/2, tela.getHeight()/2, 20)
+circunference = Circunference(tela.center(), 20)
 
 while True:
     tela.clear()
