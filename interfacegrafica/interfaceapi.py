@@ -5,7 +5,7 @@ from multipledispatch import dispatch
 # Version 17/12/22 20:34
 
 class Tela:
-    def __init__(self, x=211, y=114):
+    def __init__(self, x=211, y=116):
         self.width = x
         self.height = int(y/2)
         self.surface = []
@@ -40,11 +40,16 @@ class Tela:
         for i in range(self.height):
             for j in range(self.width):
                 output += self.surface[i][j]
-            output += "\n"
+            if i < self.height-1:
+                output += "\n"
         return output
 
     def drawObject(self, object):
-        object.draw(self)
+        if type(object).__name__ == 'list':
+            for element in object:
+                self.drawObject(element)
+        else:
+            object.draw(self)
 
     def drawPoint(self, character, x, y):
         y /= 2
@@ -65,15 +70,15 @@ class Tela:
         for j in range(height):
             self.drawPoint(character, xo, yo + j)
 
-    def drawDivisionLineSegment(self, character, yo):
+    def drawDivisionLine(self, character, yo):
         self.drawLineSegment(character, 0, yo, self.getWidth())
 
     def drawDivisionCollumn(self, character, xo):
         self.drawCollumn(character, xo, 0, self.getHeight())
 
     def drawBorder(self, cornerChar='@', horizontalChar='-', verticalChar='|'):
-        self.drawDivisionLineSegment(horizontalChar, 0)
-        self.drawDivisionLineSegment(horizontalChar, self.getHeight()-1)
+        self.drawDivisionLine(horizontalChar, 0)
+        self.drawDivisionLine(horizontalChar, self.getHeight()-1)
         self.drawDivisionCollumn(verticalChar, 0)
         self.drawDivisionCollumn(verticalChar, self.getWidth()-1)
         self.drawPoint(cornerChar, 0, 0)
